@@ -200,6 +200,16 @@ export function renderAddWebsite() {
             <option value="Coin">Coin</option>
           </select>
         </div>
+        <div class="form-group" id="wFixedPriceGroup" style="display:none;">
+          <label for="wFixedPrice"><i class="fas fa-money-bill-wave"></i> Fixed Unit Price ($)</label>
+          <input type="number" id="wFixedPrice" step="any" placeholder="e.g. 1.20">
+        </div>
+        <div class="form-group" id="wCryptoSelectGroup" style="display:none;">
+          <label for="wCryptoSearch"><i class="fab fa-bitcoin"></i> Select Cryptocurrency</label>
+          <input type="text" id="wCryptoSearch" list="cryptoList" placeholder="Search coin (e.g., Bitcoin) or select from list" autocomplete="off">
+          <datalist id="cryptoList"></datalist>
+          <!-- Using a hidden field mapped via event listener if we want exact ID -->
+        </div>
         <input type="hidden" id="wEditId" value="">
         <div class="form-actions">
           <button type="submit" class="btn btn-primary" id="wSubmitBtn"><i class="fas fa-save"></i> Save Website</button>
@@ -227,7 +237,7 @@ export function renderAddEarnings() {
   const today = new Date().toISOString().slice(0, 10);
   let websiteOptions = '<option value="">Select website</option>';
   Object.entries(websites).forEach(([id, w]) => {
-    websiteOptions += `<option value="${id}">${esc(w.name)} (${w.type})</option>`;
+    websiteOptions += `<option value="${id}" data-type="${w.type}" data-fixed="${w.fixedPrice || ''}" data-crypto="${w.cryptoId || ''}">${esc(w.name)} (${w.type})</option>`;
   });
 
   return `
@@ -473,6 +483,31 @@ export function renderSettings() {
     <div class="app-info-card">
       <p class="app-brand"><i class="fas fa-chart-pie"></i> QELTORA Finance Tracker</p>
       <p class="app-version">Version 1.0.0</p>
+    </div>
+  `;
+}
+
+// ── LIVE CRYPTO ──
+export function renderLiveCrypto() {
+  return `
+    <div class="page-header">
+      <h1><i class="fas fa-chart-area"></i> Live Crypto Prices</h1>
+      <p class="subtitle">Real-time market data globally powered by CoinGecko</p>
+    </div>
+    <div class="filter-bar">
+      <div class="filter-group" style="flex: 1;">
+        <label><i class="fas fa-search"></i> Search Any Coin</label>
+        <input type="text" id="liveCryptoSearch" placeholder="Type name (e.g., Shiba Inu, Ethereum...)">
+      </div>
+      <button class="btn btn-primary" id="btnSearchCrypto"><i class="fas fa-search"></i> Search</button>
+      <button class="btn btn-outline" id="btnRefreshCrypto"><i class="fas fa-sync-alt"></i> Top 100</button>
+    </div>
+    <div class="table-card">
+      <div id="liveCryptoContent" style="min-height: 300px; position:relative;">
+        <div class="loading-state" style="display:flex; justify-content:center; align-items:center; height:200px;">
+          <i class="fas fa-spinner fa-spin fa-2x" style="color:var(--accent-primary);"></i>
+        </div>
+      </div>
     </div>
   `;
 }

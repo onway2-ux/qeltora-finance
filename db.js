@@ -10,7 +10,14 @@ export function getCache() { return _cache; }
 // ── WEBSITES ──
 export async function addWebsite(uid, data) {
   const r = push(ref(db, `users/${uid}/websites`));
-  await set(r, { name: data.name, type: data.type, createdAt: Date.now() });
+  await set(r, {
+    name: data.name,
+    type: data.type,
+    fixedPrice: data.fixedPrice || null,
+    cryptoId: data.cryptoId || null,
+    cryptoName: data.cryptoName || null,
+    createdAt: Date.now()
+  });
   return r.key;
 }
 

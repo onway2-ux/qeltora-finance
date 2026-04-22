@@ -10,6 +10,7 @@ import {
 import {
   renderDashboard, renderAddWebsite, renderAddEarnings,
   renderCryptoTracker, renderHistory, renderSettings,
+  renderLiveCrypto,
   showToast, showConfirm
 } from './ui.js';
 
@@ -82,6 +83,7 @@ function rerender() {
       case 'websites': main.innerHTML = renderAddWebsite(); bindWebsiteEvents(); break;
       case 'earnings': main.innerHTML = renderAddEarnings(); bindEarningsEvents(); break;
       case 'crypto': main.innerHTML = renderCryptoTracker(); bindCryptoEvents(); break;
+      case 'livecrypto': main.innerHTML = renderLiveCrypto(); bindLiveCryptoEvents(); break;
       case 'history': main.innerHTML = renderHistory(); bindHistoryEvents(); break;
       case 'settings': main.innerHTML = renderSettings(); bindSettingsEvents(); break;
     }
@@ -108,25 +110,69 @@ function initMobileMenu() {
   });
 }
 
+let cachedCoinList = null;
+async function fetchCoinList() {
+  if (cachedCoinList) return cachedCoinList;
+  try {
+    const res = await fetch('https://api.coingecko.com/api/v3/coins/list');
+    cachedCoinList = await res.json();
+    return cachedCoinList;
+  } catch (err) {
+    return [];
+  }
+}
+
 // ── WEBSITE EVENTS ──
 function bindWebsiteEvents() {
   const form = document.getElementById('websiteForm');
   const editIdInput = document.getElementById('wEditId');
   const cancelBtn = document.getElementById('wCancelBtn');
   const submitBtn = document.getElementById('wSubmitBtn');
+  
+  const wType = document.getElementById('wType');
+  const fixedPriceGroup = document.getElementById('wFixedPriceGroup');
+  const cryptoGroup = document.getElementById('wCryptoSelectGroup');
+  const cryptoSearch = document.getElementById('wCryptoSearch');
+  const datalist = document.getElementById('cryptoList');
+
+  if (datalist) {
+    fetchCoinList().then(list => {
+      let html = '';
+      // Limit to 2000 to prevent datalist DOM freeze while capturing all major coins
+      list.slice(0, 2000).forEach(c => html += `<option value="${c.name}" data-id="${c.id}"></option>`);
+      datalist.innerHTML = html;
+    });
+  }
+
+  wType.addEventListener('change', () => {
+    if (wType.value === 'Coin') { fixedPriceGroup.style.display = 'block'; cryptoGroup.style.display = 'none'; }
+    else if (wType.value === 'Crypto') { fixedPriceGroup.style.display = 'none'; cryptoGroup.style.display = 'block'; }
+    else { fixedPriceGroup.style.display = 'none'; cryptoGroup.style.display = 'none'; }
+  });
 
   form.addEventListener('submit', async e => {
     e.preventDefault();
     const name = document.getElementById('wName').value.trim();
-    const type = document.getElementById('wType').value;
+    const type = wType.value;
+    const fixedPrice = document.getElementById('wFixedPrice').value || null;
+    let cryptoId = null;
+    let cryptoName = null;
+
+    if (type === 'Crypto') {
+      const searchVal = cryptoSearch.value;
+      const opt = Array.from(datalist.options).find(o => o.value === searchVal);
+      if (opt) { cryptoId = opt.getAttribute('data-id'); cryptoName = searchVal; }
+      else { cryptoId = searchVal.toLowerCase().replace(/\s+/g,'-'); cryptoName = searchVal; }
+    }
     const editId = editIdInput.value;
 
     try {
+      const payload = { name, type, fixedPrice, cryptoId, cryptoName };
       if (editId) {
-        await updateWebsite(uid, editId, { name, type });
+        await updateWebsite(uid, editId, payload);
         showToast('Website updated!');
       } else {
-        await addWebsite(uid, { name, type });
+        await addWebsite(uid, payload);
         showToast('Website added!');
       }
       form.reset();
@@ -192,6 +238,30 @@ function bindEarningsEvents() {
   };
   amountEl.addEventListener('input', calc);
   priceEl.addEventListener('input', calc);
+
+  const eWebsite = document.getElementById('eWebsite');
+  eWebsite.addEventListener('change', async () => {
+    const opt = eWebsite.options[eWebsite.selectedIndex];
+    if (!opt || !opt.value) return;
+    const isFixed = opt.getAttribute('data-fixed');
+    const isCrypto = opt.getAttribute('data-crypto');
+    
+    if (isFixed && isFixed !== 'null') {
+      priceEl.value = isFixed;
+      calc();
+    } else if (isCrypto && isCrypto !== 'null') {
+      priceEl.placeholder = 'Fetching...';
+      try {
+        const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${isCrypto}&vs_currencies=usd`);
+        const data = await res.json();
+        if (data[isCrypto]) {
+          priceEl.value = data[isCrypto].usd;
+          calc();
+        }
+      } catch (e) { console.error('Failed fetch'); }
+      priceEl.placeholder = 'e.g. 0.0012';
+    }
+  });
 
   form.addEventListener('submit', async e => {
     e.preventDefault();
@@ -419,6 +489,79 @@ function bindSettingsEvents() {
     const res = await logout();
     if (res.success) { detachAll(); window.location.href = 'login.html'; }
   });
+}
+
+// ── LIVE CRYPTO ──
+function bindLiveCryptoEvents() {
+  const content = document.getElementById('liveCryptoContent');
+  const searchInput = document.getElementById('liveCryptoSearch');
+  const btnSearch = document.getElementById('btnSearchCrypto');
+  const btnRefresh = document.getElementById('btnRefreshCrypto');
+
+  const renderTable = (coins) => {
+    if (!coins.length) {
+      content.innerHTML = '<p class="empty-msg">No coins found.</p>';
+      return;
+    }
+    let rows = '';
+    coins.forEach(c => {
+      const pChange = c.price_change_percentage_24h || 0;
+      const pcClass = pChange >= 0 ? 'positive' : 'negative';
+      rows += `
+        <tr>
+          <td><div style="display:flex;align-items:center;gap:8px;"><img src="${c.image || ''}" width="20" height="20" onerror="this.style.display='none'"> <strong>${c.name}</strong> <small>(${c.symbol.toUpperCase()})</small></div></td>
+          <td>$${(c.current_price || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:6})}</td>
+          <td class="${pcClass}">${pChange.toFixed(2)}%</td>
+          <td>$${(c.market_cap || 0).toLocaleString()}</td>
+        </tr>
+      `;
+    });
+    content.innerHTML = `
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead><tr><th>Coin</th><th>Price</th><th>24h Change</th><th>Market Cap</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+  };
+
+  const fetchMarkets = async (ids = '') => {
+    content.innerHTML = '<div class="loading-state" style="display:flex; justify-content:center; align-items:center; height:200px;"><i class="fas fa-spinner fa-spin fa-2x" style="color:var(--accent-primary);"></i></div>';
+    try {
+      const url = ids 
+        ? `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids}&order=market_cap_desc`
+        : `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1`;
+      const res = await fetch(url);
+      const data = await res.json();
+      renderTable(data);
+    } catch(err) {
+      content.innerHTML = '<p class="empty-msg" style="color:red;">Error fetching data. Rate limit reached?</p>';
+    }
+  };
+
+  const attemptSearch = async () => {
+    const q = searchInput.value.trim().toLowerCase();
+    if (!q) return fetchMarkets();
+    content.innerHTML = '<div class="loading-state" style="display:flex; justify-content:center; align-items:center; height:200px;"><i class="fas fa-spinner fa-spin fa-2x" style="color:var(--accent-primary);"></i></div>';
+    try {
+      const res = await fetch(`https://api.coingecko.com/api/v3/search?query=${q}`);
+      const data = await res.json();
+      if (data.coins && data.coins.length > 0) {
+        const ids = data.coins.slice(0, 50).map(c => c.id).join(',');
+        fetchMarkets(ids);
+      } else {
+        content.innerHTML = '<p class="empty-msg">No coins found for this search.</p>';
+      }
+    } catch(err) {
+      content.innerHTML = '<p class="empty-msg" style="color:red;">Search API error. Too many requests?</p>';
+    }
+  };
+
+  btnRefresh.addEventListener('click', () => { searchInput.value = ''; fetchMarkets(); });
+  btnSearch.addEventListener('click', attemptSearch);
+  searchInput.addEventListener('keypress', e => { if(e.key === 'Enter') attemptSearch(); });
+
+  fetchMarkets();
 }
 
 // ── Theme ──
