@@ -154,15 +154,17 @@ function bindWebsiteEvents() {
     e.preventDefault();
     const name = document.getElementById('wName').value.trim();
     const type = wType.value;
-    const fixedPrice = document.getElementById('wFixedPrice').value || null;
+    let fixedPrice = null;
     let cryptoId = null;
     let cryptoName = null;
 
-    if (type === 'Crypto') {
+    if (type === 'Coin') {
+      fixedPrice = document.getElementById('wFixedPrice').value || null;
+    } else if (type === 'Crypto') {
       const searchVal = cryptoSearch.value;
       const opt = Array.from(datalist.options).find(o => o.value === searchVal);
       if (opt) { cryptoId = opt.getAttribute('data-id'); cryptoName = searchVal; }
-      else { cryptoId = searchVal.toLowerCase().replace(/\s+/g,'-'); cryptoName = searchVal; }
+      else if (searchVal) { cryptoId = searchVal.toLowerCase().replace(/\s+/g,'-'); cryptoName = searchVal; }
     }
     const editId = editIdInput.value;
 
@@ -202,7 +204,12 @@ function bindWebsiteEvents() {
       const w = getCache().websites[id];
       if (!w) return;
       document.getElementById('wName').value = w.name;
-      document.getElementById('wType').value = w.type;
+      const wTypeEl = document.getElementById('wType');
+      wTypeEl.value = w.type;
+      document.getElementById('wFixedPrice').value = w.fixedPrice || '';
+      document.getElementById('wCryptoSearch').value = w.cryptoName || '';
+      wTypeEl.dispatchEvent(new Event('change')); // Triggers toggle visibility
+      
       editIdInput.value = id;
       cancelBtn.style.display = '';
       submitBtn.innerHTML = '<i class="fas fa-pen"></i> Update Website';
@@ -242,15 +249,23 @@ function bindEarningsEvents() {
   const eWebsite = document.getElementById('eWebsite');
   eWebsite.addEventListener('change', async () => {
     const opt = eWebsite.options[eWebsite.selectedIndex];
-    if (!opt || !opt.value) return;
+    if (!opt || !opt.value) {
+      priceEl.readOnly = false;
+      priceEl.value = '';
+      calc();
+      return;
+    }
     const isFixed = opt.getAttribute('data-fixed');
     const isCrypto = opt.getAttribute('data-crypto');
     
     if (isFixed && isFixed !== 'null') {
       priceEl.value = isFixed;
+      priceEl.readOnly = true;
       calc();
     } else if (isCrypto && isCrypto !== 'null') {
+      priceEl.readOnly = true;
       priceEl.placeholder = 'Fetching...';
+      priceEl.value = '';
       try {
         const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${isCrypto}&vs_currencies=usd`);
         const data = await res.json();
@@ -258,8 +273,12 @@ function bindEarningsEvents() {
           priceEl.value = data[isCrypto].usd;
           calc();
         }
-      } catch (e) { console.error('Failed fetch'); }
+      } catch (e) { console.error('Failed fetch'); priceEl.readOnly = false; }
       priceEl.placeholder = 'e.g. 0.0012';
+    } else {
+      priceEl.readOnly = false;
+      priceEl.value = '';
+      calc();
     }
   });
 
