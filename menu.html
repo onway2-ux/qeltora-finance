@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QELTORA Finance Tracker - Dashboard</title>
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Styles -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-layout">
+    
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon"><i class="fas fa-chart-pie"></i></div>
+        <div>
+          <h2>QELTORA</h2>
+          <small>Finance Tracker</small>
+        </div>
+      </div>
+      
+      <div class="sidebar-nav">
+        <div class="nav-label">Main Menu</div>
+        <button class="nav-item active" data-page="dashboard">
+          <i class="fas fa-home"></i> Dashboard
+        </button>
+        <button class="nav-item" data-page="websites">
+          <i class="fas fa-globe"></i> Add Website
+        </button>
+        <button class="nav-item" data-page="earnings">
+          <i class="fas fa-dollar-sign"></i> Add Earnings
+        </button>
+        <button class="nav-item" data-page="crypto">
+          <i class="fab fa-bitcoin"></i> Crypto Tracker
+        </button>
+        <button class="nav-item" data-page="history">
+          <i class="fas fa-history"></i> Full History
+        </button>
+        
+        <div class="nav-label" style="margin-top: 16px;">System</div>
+        <button class="nav-item" data-page="settings">
+          <i class="fas fa-cog"></i> Settings
+        </button>
+      </div>
+
+      <div class="sidebar-footer">
+        <div class="user-info">
+          <div class="user-avatar"><i class="fas fa-user-astronaut"></i></div>
+          <div class="user-details">
+            <span id="userEmail">Loading...</span>
+            <small>Premium User</small>
+          </div>
+        </div>
+        <button class="btn-logout-sidebar" id="logoutBtn">
+          <i class="fas fa-sign-out-alt"></i> Logout
+        </button>
+      </div>
+    </aside>
+
+    <div class="sidebar-overlay"></div>
+
+    <!-- Main Wrapper -->
+    <div class="main-wrapper">
+      
+      <!-- Mobile Topbar -->
+      <div class="mobile-topbar">
+        <button class="menu-burger" id="menuBurger">
+          <i class="fas fa-bars"></i>
+        </button>
+        <span class="brand-text">QELTORA</span>
+      </div>
+
+      <!-- Main Content Area -->
+      <main class="main-content" id="mainContent">
+        <!-- Content injected by JS -->
+      </main>
+      
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Application Logic -->
+  <script type="module" src="app.js"></script>
+</body>
+</html>

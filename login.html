@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QELTORA Finance Tracker - Login</title>
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Styles -->
+  <link rel="stylesheet" href="style.css">
+  
+  <meta name="description" content="Professional dashboard for tracking PTC earnings and Crypto P/L.">
+</head>
+<body>
+  <div class="login-page">
+    <div class="login-container">
+      <div class="login-brand">
+        <div class="brand-icon"><i class="fas fa-chart-pie"></i></div>
+        <h1>QELTORA</h1>
+        <p>Premium Finance Tracker</p>
+      </div>
+      
+      <div class="login-card">
+        <div class="login-tabs">
+          <button class="login-tab active" id="loginTab">Sign In</button>
+          <button class="login-tab" id="signupTab">Sign Up</button>
+        </div>
+        
+        <form class="login-form" id="authForm">
+          <div class="form-group">
+            <label for="email">Email Address</label>
+            <input type="email" id="email" placeholder="you@example.com" required>
+          </div>
+          <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" placeholder="••••••••" required>
+          </div>
+          <button type="submit" class="btn-login" id="submitBtn">Sign In</button>
+          <div class="login-error" id="errorMsg"></div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { signup, login, onAuth } from './auth.js';
+
+    const loginTab = document.getElementById('loginTab');
+    const signupTab = document.getElementById('signupTab');
+    const form = document.getElementById('authForm');
+    const emailInput = document.getElementById('email');
+    const pwdInput = document.getElementById('password');
+    const submitBtn = document.getElementById('submitBtn');
+    const errorEl = document.getElementById('errorMsg');
+
+    let isLogin = true;
+
+    // Check if already logged in
+    onAuth(user => {
+      if (user) {
+        window.location.href = 'menu.html';
+      }
+    });
+
+    loginTab.addEventListener('click', (e) => {
+      e.preventDefault();
+      isLogin = true;
+      loginTab.classList.add('active');
+      signupTab.classList.remove('active');
+      submitBtn.textContent = 'Sign In';
+      errorEl.textContent = '';
+    });
+
+    signupTab.addEventListener('click', (e) => {
+      e.preventDefault();
+      isLogin = false;
+      signupTab.classList.add('active');
+      loginTab.classList.remove('active');
+      submitBtn.textContent = 'Sign Up';
+      errorEl.textContent = '';
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = emailInput.value.trim();
+      const pwd = pwdInput.value;
+      
+      if (!email || !pwd) return;
+
+      submitBtn.disabled = true;
+      errorEl.textContent = '';
+      submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+
+      const res = isLogin ? await login(email, pwd) : await signup(email, pwd);
+
+      if (!res.success) {
+        errorEl.textContent = res.error;
+        submitBtn.disabled = false;
+        submitBtn.textContent = isLogin ? 'Sign In' : 'Sign Up';
+      }
+    });
+  </script>
+</body>
+</html>
